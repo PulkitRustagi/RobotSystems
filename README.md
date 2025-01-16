@@ -1,4 +1,4 @@
-# Picar-X
+# Picar-X 12
 
 Picar-X Python library for Raspberry Pi.
 
