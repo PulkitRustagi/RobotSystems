@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 from .basic import _Basic_class
-import gpiozero  # https://gpiozero.readthedocs.io/en/latest/installing.html
-from gpiozero import OutputDevice, InputDevice, Button
+# import gpiozero  # https://gpiozero.readthedocs.io/en/latest/installing.html
+# from gpiozero import OutputDevice, InputDevice, Button
 
 
 class Pin(_Basic_class):
@@ -91,7 +91,8 @@ class Pin(_Basic_class):
         self._info("Pin init finished.")
 
     def close(self):
-        self.gpio.close()
+        # self.gpio.close()
+        pass
 
     def deinit(self):
         self.gpio.close()
@@ -125,12 +126,15 @@ class Pin(_Basic_class):
                 self.gpio.close()
         #
         if mode in [None, self.OUT]:
-            self.gpio = OutputDevice(self._pin_num)
+            # self.gpio = OutputDevice(self._pin_num)
+            self.gpio = None
         else:
             if pull in [self.PULL_UP]:
-                self.gpio = InputDevice(self._pin_num, pull_up=True)
+                # self.gpio = InputDevice(self._pin_num, pull_up=True)
+                self.gpio = None
             else:
-                self.gpio = InputDevice(self._pin_num, pull_up=False)
+                # self.gpio = InputDevice(self._pin_num, pull_up=False)
+                self.gpio = None
 
     def dict(self, _dict=None):
         """
@@ -181,10 +185,10 @@ class Pin(_Basic_class):
                 self.setup(self.OUT)
             if bool(value):
                 value = 1
-                self.gpio.on()
+                # self.gpio.on()
             else:
                 value = 0
-                self.gpio.off()
+                # self.gpio.off()
             return value
 
     def on(self):

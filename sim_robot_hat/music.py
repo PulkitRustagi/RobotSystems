@@ -3,7 +3,7 @@ from .basic import _Basic_class
 from .utils import command_exists
 import time
 import threading
-import pyaudio
+# import pyaudio
 import os
 import struct
 import math
@@ -11,7 +11,7 @@ import math
 class Music(_Basic_class):
     """Play music, sound affect and note control"""
 
-    FORMAT = pyaudio.paInt16
+    # FORMAT = pyaudio.paInt16
     CHANNELS = 1
     RATE = 44100
 

@@ -1,13 +1,24 @@
-# import sys
-# import os
-# sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-
-from robot_hat import Pin, ADC, PWM, Servo, fileDB
-from robot_hat import Grayscale_Module, Ultrasonic, utils
-import time
 import os
+import logging
+import math
+from logdecorator import log_on_start, log_on_end, log_on_error
+try:
+    from robot_hat import Pin, ADC, PWM, Servo, fileDB
+    from robot_hat import Grayscale_Module, Ultrasonic, utils
+    on_the_robot = True
+except ImportError:
+    import sys
+    sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+    from sim_robot_hat import Pin, ADC, PWM, Servo, fileDB
+    from sim_robot_hat import Grayscale_Module, Ultrasonic, utils
+    on_the_robot = False
+import time
+import atexit
 
-
+logging_format = "%(asctime)s: %(message)s"
+logging.basicConfig(format=logging_format, level=logging.INFO, datefmt="%H:%M:%S")
+logging.getLogger().setLevel(logging.DEBUG)
+                             
 def constrain(x, min_val, max_val):
     '''
     Constrains value to be within a range.
@@ -49,7 +60,10 @@ class Picarx(object):
         time.sleep(0.2)
 
         # --------- config_flie ---------
-        self.config_flie = fileDB(config, 777, os.getlogin())
+        if on_the_robot:
+            self.config_flie = fileDB(config, 777, os.getlogin())
+        else:
+            self.config_flie = fileDB(config, 777, None)
 
         # --------- servos init ---------
         self.cam_pan = Servo(servo_pins[0])
@@ -113,7 +127,7 @@ class Picarx(object):
         speed = abs(speed)
         # print(f"direction: {direction}, speed: {speed}")
         if speed != 0:
-            speed = int(speed /2 ) + 50
+            speed = speed  # int(speed /2 ) + 50  #-- commented for 2.7(2)
         speed = speed - self.cali_speed_value[motor]
         if direction < 0:
             self.motor_direction_pins[motor].high()
@@ -184,14 +198,19 @@ class Picarx(object):
             abs_current_angle = abs(current_angle)
             if abs_current_angle > self.DIR_MAX:
                 abs_current_angle = self.DIR_MAX
-            power_scale = (100 - abs_current_angle) / 100.0 
+            # power_scale = (100 - abs_current_angle) / 100.0 
             if (current_angle / abs_current_angle) > 0:
-                self.set_motor_speed(1, -1*speed)
-                self.set_motor_speed(2, speed * power_scale)
+                left_motor_speed, right_motor_speed = self.ackermann_wheel_speed(math.radians(abs_current_angle), speed, 0.5)
+                logging.debug("[Backing Right: L>R] Changing motor speed to L: %.2f, R: %.2f"%(left_motor_speed, right_motor_speed))
+                self.set_motor_speed(1, -left_motor_speed)
+                self.set_motor_speed(2, right_motor_speed) 
             else:
-                self.set_motor_speed(1, -1*speed * power_scale)
-                self.set_motor_speed(2, speed )
+                right_motor_speed, left_motor_speed = self.ackermann_wheel_speed(math.radians(abs_current_angle), speed, 0.5)
+                logging.debug("[Backing Right: L<R] Changing motor speed to L: %.2f, R: %.2f"%(left_motor_speed, right_motor_speed))
+                self.set_motor_speed(1, -left_motor_speed)
+                self.set_motor_speed(2, right_motor_speed)
         else:
+            logging.debug("Moving straight backward L: %.2f, R: %.2f"%(speed, speed))
             self.set_motor_speed(1, -1*speed)
             self.set_motor_speed(2, speed)  
 
@@ -201,16 +220,37 @@ class Picarx(object):
             abs_current_angle = abs(current_angle)
             if abs_current_angle > self.DIR_MAX:
                 abs_current_angle = self.DIR_MAX
-            power_scale = (100 - abs_current_angle) / 100.0
+            # power_scale = (100 - abs_current_angle) / 100.0
             if (current_angle / abs_current_angle) > 0:
-                self.set_motor_speed(1, 1*speed * power_scale)
-                self.set_motor_speed(2, -speed) 
+                left_motor_speed, right_motor_speed = self.ackermann_wheel_speed(math.radians(abs_current_angle), speed, 0.5)
+                logging.debug("[Turning Right: L>R] Changing motor speed to L: %.2f, R: %.2f"%(left_motor_speed, right_motor_speed))
+                self.set_motor_speed(1,   left_motor_speed)
+                self.set_motor_speed(2, -right_motor_speed) 
             else:
-                self.set_motor_speed(1, speed)
-                self.set_motor_speed(2, -1*speed * power_scale)
+                right_motor_speed, left_motor_speed = self.ackermann_wheel_speed(math.radians(abs_current_angle), speed, 0.5)
+                logging.debug("[Turning Right: L<R] Changing motor speed to L: %.2f, R: %.2f"%(left_motor_speed, right_motor_speed))
+                self.set_motor_speed(1,   left_motor_speed)
+                self.set_motor_speed(2, -right_motor_speed)
         else:
+            logging.debug("Moving straight forward L: %.2f, R: %.2f"%(speed, speed))
             self.set_motor_speed(1, speed)
-            self.set_motor_speed(2, -1*speed)                  
+            self.set_motor_speed(2, -1*speed)       
+
+    # function implemented for 2.7(3)
+    def ackermann_wheel_speed(self, steering_angle, base_speed, gain):
+        """
+        Computes left and right wheel speeds using a sinusoidal approximation 
+        to emulate Ackermann steering.
+
+        :param steering_angle: float, steering angle in radians (or degrees if sin() is adjusted)
+        :param base_speed: float, nominal translational speed
+        :param gain: float, scaling factor k that adjusts turning sharpness
+        :return: (float, float), left_wheel_speed, right_wheel_speed
+        """
+        # For simplicity, assume steering_angle is in radians
+        left_wheel_speed = base_speed * (1.0 - gain * math.sin(steering_angle))
+        right_wheel_speed = base_speed * (1.0 + gain * math.sin(steering_angle))
+        return left_wheel_speed, right_wheel_speed
 
     def stop(self):
         '''
@@ -259,6 +299,153 @@ class Picarx(object):
         self.set_dir_servo_angle(0)
         self.set_cam_tilt_angle(0)
         self.set_cam_pan_angle(0)
+    
+    def move_discrete(self, direction: str, speed: float, angle: float = 0.0, duration: float = 2.0):
+        """
+        Move the car in a discrete manner.
+
+        :param direction: 'forward' or 'backward'
+        :param speed: speed value (positive for forward motion)
+        :param angle: steering angle in degrees (default=0 for straight)
+        :param duration: time in seconds to move before stopping
+        """
+        logging.debug("[move_discrete] direction: %s, speed: %.2f, angle: %.2f, duration: %.2f",
+                    direction, speed, angle, duration)
+
+        # Constrain the steering angle, set it, then move
+        self.set_dir_servo_angle(angle)
+        
+        if direction.lower() == 'forward':
+            self.forward(speed)
+        elif direction.lower() == 'backward':
+            self.backward(speed)
+        else:
+            logging.warning("Invalid direction specified. Use 'forward' or 'backward'.")
+            return
+
+        time.sleep(duration)
+        self.stop()
+
+    def parallel_park_left(self, speed=30):
+        """
+        Perform a simplified parallel parking maneuver to the left.
+
+        Steps:
+        1) Turn wheels fully left and reverse for short duration.
+        2) Turn wheels fully right and continue reversing to straighten out.
+        3) Move forward slightly to finalize position.
+        """
+        logging.info("[parallel_park_left] Starting parallel parking to the left.")
+
+        # Step 1: Turn wheels left (assume max angle is self.DIR_MAX) and back up
+        self.set_dir_servo_angle(self.DIR_MAX)    # Max left
+        self.backward(speed)
+        time.sleep(1.5)   # Adjust time as necessary
+        self.stop()
+
+        # Step 2: Turn wheels right (negative angle) and reverse more
+        self.set_dir_servo_angle(-self.DIR_MAX)   # Max right
+        self.backward(speed)
+        time.sleep(1.5)
+        self.stop()
+
+        # Step 3: Straighten out and move forward to finalize position
+        self.set_dir_servo_angle(0)
+        self.forward(speed)
+        time.sleep(1.0)
+        self.stop()
+        logging.info("[parallel_park_left] Completed.")
+
+    def parallel_park_right(self, speed=30):
+        """
+        Perform a simplified parallel parking maneuver to the right.
+        """
+        logging.info("[parallel_park_right] Starting parallel parking to the right.")
+
+        # Step 1: Turn wheels right and back up
+        self.set_dir_servo_angle(-self.DIR_MAX)  # Max right
+        self.backward(speed)
+        time.sleep(1.5)
+        self.stop()
+
+        # Step 2: Turn wheels left (positive angle) and reverse more
+        self.set_dir_servo_angle(self.DIR_MAX)   # Max left
+        self.backward(speed)
+        time.sleep(1.5)
+        self.stop()
+
+        # Step 3: Straighten out and move forward
+        self.set_dir_servo_angle(0)
+        self.forward(speed)
+        time.sleep(1.0)
+        self.stop()
+        logging.info("[parallel_park_right] Completed.")
+
+    def three_point_turn_left(self, speed=30):
+        """
+        Perform a simple three-point (K) turn starting to the left.
+        1) Forward left
+        2) Backward right
+        3) Forward left
+        """
+        logging.info("[three_point_turn_left] Starting three-point turn (left).")
+
+        # 1) Forward left
+        self.set_dir_servo_angle(self.DIR_MAX)  # Turn wheels left
+        self.forward(speed)
+        time.sleep(1.5)
+        self.stop()
+
+        # 2) Backward right
+        self.set_dir_servo_angle(-self.DIR_MAX) # Turn wheels right
+        self.backward(speed)
+        time.sleep(1.5)
+        self.stop()
+
+        # 3) Forward left again
+        self.set_dir_servo_angle(self.DIR_MAX)
+        self.forward(speed)
+        time.sleep(1.5)
+        self.stop()
+
+        # Straighten wheels
+        self.set_dir_servo_angle(0)
+        logging.info("[three_point_turn_left] Completed.")
+
+    def three_point_turn_right(self, speed=30):
+        """
+        Perform a simple three-point (K) turn starting to the right.
+        1) Forward right
+        2) Backward left
+        3) Forward right
+        """
+        logging.info("[three_point_turn_right] Starting three-point turn (right).")
+
+        # 1) Forward right
+        self.set_dir_servo_angle(-self.DIR_MAX)
+        self.forward(speed)
+        time.sleep(1.5)
+        self.stop()
+
+        # 2) Backward left
+        self.set_dir_servo_angle(self.DIR_MAX)
+        self.backward(speed)
+        time.sleep(1.5)
+        self.stop()
+
+        # 3) Forward right
+        self.set_dir_servo_angle(-self.DIR_MAX)
+        self.forward(speed)
+        time.sleep(1.5)
+        self.stop()
+
+        # Straighten wheels
+        self.set_dir_servo_angle(0)
+        logging.info("[three_point_turn_right] Completed.")
+
+
+    
+    atexit.register(stop)
 
 if __name__ == "__main__":
     px = Picarx()

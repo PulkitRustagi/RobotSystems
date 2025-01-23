@@ -12,7 +12,11 @@
         and the background gray value.
 
 '''
-from picarx import Picarx
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+# print("path: ", sys.path[-1]) 
+from picarx.picarx_improved import Picarx
 from time import sleep
 
 px = Picarx()
