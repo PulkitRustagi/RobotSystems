@@ -340,19 +340,19 @@ class Picarx(object):
         # Step 1: Turn wheels left (assume max angle is self.DIR_MAX) and back up
         self.set_dir_servo_angle(self.DIR_MAX)    # Max left
         self.backward(speed)
-        time.sleep(1.5)   # Adjust time as necessary
+        time.sleep(3)   # Adjust time as necessary
         self.stop()
 
         # Step 2: Turn wheels right (negative angle) and reverse more
         self.set_dir_servo_angle(-self.DIR_MAX)   # Max right
         self.backward(speed)
-        time.sleep(1.5)
+        time.sleep(3)
         self.stop()
 
         # Step 3: Straighten out and move forward to finalize position
         self.set_dir_servo_angle(0)
         self.forward(speed)
-        time.sleep(1.0)
+        time.sleep(3)
         self.stop()
         logging.info("[parallel_park_left] Completed.")
 
@@ -365,19 +365,19 @@ class Picarx(object):
         # Step 1: Turn wheels right and back up
         self.set_dir_servo_angle(-self.DIR_MAX)  # Max right
         self.backward(speed)
-        time.sleep(1.5)
+        time.sleep(3)
         self.stop()
 
         # Step 2: Turn wheels left (positive angle) and reverse more
         self.set_dir_servo_angle(self.DIR_MAX)   # Max left
         self.backward(speed)
-        time.sleep(1.5)
+        time.sleep(3)
         self.stop()
 
         # Step 3: Straighten out and move forward
         self.set_dir_servo_angle(0)
         self.forward(speed)
-        time.sleep(1.0)
+        time.sleep(3)
         self.stop()
         logging.info("[parallel_park_right] Completed.")
 
@@ -393,19 +393,19 @@ class Picarx(object):
         # 1) Forward left
         self.set_dir_servo_angle(self.DIR_MAX)  # Turn wheels left
         self.forward(speed)
-        time.sleep(1.5)
+        time.sleep(3)
         self.stop()
 
         # 2) Backward right
         self.set_dir_servo_angle(-self.DIR_MAX) # Turn wheels right
         self.backward(speed)
-        time.sleep(1.5)
+        time.sleep(3)
         self.stop()
 
         # 3) Forward left again
         self.set_dir_servo_angle(self.DIR_MAX)
         self.forward(speed)
-        time.sleep(1.5)
+        time.sleep(3)
         self.stop()
 
         # Straighten wheels
@@ -424,19 +424,19 @@ class Picarx(object):
         # 1) Forward right
         self.set_dir_servo_angle(-self.DIR_MAX)
         self.forward(speed)
-        time.sleep(1.5)
+        time.sleep(3)
         self.stop()
 
         # 2) Backward left
         self.set_dir_servo_angle(self.DIR_MAX)
         self.backward(speed)
-        time.sleep(1.5)
+        time.sleep(3)
         self.stop()
 
         # 3) Forward right
         self.set_dir_servo_angle(-self.DIR_MAX)
         self.forward(speed)
-        time.sleep(1.5)
+        time.sleep(3)
         self.stop()
 
         # Straighten wheels

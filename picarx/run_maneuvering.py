@@ -14,12 +14,12 @@ def main():
     # Dictionary mapping numeric strings to lambda functions that call Picarx methods
     # Adjust angles, speeds, and durations as needed for your platform.
     command_map = {
-        '1': lambda: px.move_discrete('forward',  30, angle=0,          duration=1.5),
-        '2': lambda: px.move_discrete('backward', 30, angle=0,          duration=1.5),
-        '3': lambda: px.move_discrete('forward',  30, angle= px.DIR_MAX,  duration=1.5),
-        '4': lambda: px.move_discrete('forward',  30, angle=-px.DIR_MAX, duration=1.5),
-        '5': lambda: px.move_discrete('backward', 30, angle= px.DIR_MAX,  duration=1.5),
-        '6': lambda: px.move_discrete('backward', 30, angle=-px.DIR_MAX, duration=1.5),
+        '1': lambda: px.move_discrete('forward',  30, angle=0,          duration=3),
+        '2': lambda: px.move_discrete('backward', 30, angle=0,          duration=3),
+        '3': lambda: px.move_discrete('forward',  30, angle= px.DIR_MAX,  duration=3),
+        '4': lambda: px.move_discrete('forward',  30, angle=-px.DIR_MAX, duration=3),
+        '5': lambda: px.move_discrete('backward', 30, angle= px.DIR_MAX,  duration=3),
+        '6': lambda: px.move_discrete('backward', 30, angle=-px.DIR_MAX, duration=3),
         '7': lambda: px.parallel_park_left(speed=30),
         '8': lambda: px.parallel_park_right(speed=30),
         '9': lambda: px.three_point_turn_left(speed=30),
