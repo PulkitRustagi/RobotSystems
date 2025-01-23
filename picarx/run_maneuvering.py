@@ -1,6 +1,7 @@
 import time
 import logging
 from picarx_improved import Picarx
+
 def main():
     """
     Continuously prompts the user for numeric keyboard commands and executes the
