@@ -52,25 +52,38 @@ class Interpreter:
         diff_center_right = center_val - right_val
 
         # Determine pattern based on differences exceeding sensitivity
-        if diff_left_center > self.sensitivity:
-            pattern = [1, 0, 0]  # Sharp left
-            return 'sharp left'
-        elif diff_center_right > self.sensitivity:
-            pattern = [1, 1, 0]  # Slight left
-            return 'slight left'
-        elif diff_right_center > self.sensitivity:
-            pattern = [0, 0, 1]  # Sharp right
-            return 'sharp right'
-        elif diff_center_left > self.sensitivity:
-            pattern = [0, 1, 1]  # Slight right
-            return 'slight right'
-        elif diff_center_left > self.sensitivity and diff_center_right > self.sensitivity:
-            pattern = [0, 1, 0]  # Centered
+        # if diff_left_center > self.sensitivity:
+        #     pattern = [1, 0, 0]  # Sharp left
+        #     return 'sharp left'
+        # elif diff_center_right > self.sensitivity:
+        #     pattern = [1, 1, 0]  # Slight left
+        #     return 'slight left'
+        # elif diff_right_center > self.sensitivity:
+        #     pattern = [0, 0, 1]  # Sharp right
+        #     return 'sharp right'
+        # elif diff_center_left > self.sensitivity:
+        #     pattern = [0, 1, 1]  # Slight right
+        #     return 'slight right'
+        # elif diff_center_left > self.sensitivity and diff_center_right > self.sensitivity:
+        #     pattern = [0, 1, 0]  # Centered
+        #     return 'centered'
+        # else:
+        #     # No significant difference detected between any adjacent sensors
+        #     return pass  # Keep previous action (line is out of range)
+
+        if left_val - center_val > self.sensitivity and right_val - center_val > self.sensitivity:
             return 'centered'
+        elif center_val - left_val > self.sensitivity and right_val - left_val > self.sensitivity:
+            return 'sharp left'
+        elif center_val - left_val < self.sensitivity and right_val - left_val > self.sensitivity:
+            return 'slight left'
+        elif left_val - center_val > self.sensitivity and left_val - right_val > self.sensitivity:
+            return 'sharp right'
+        elif left_val - center_val < self.sensitivity and left_val - right_val > self.sensitivity:
+            return 'slight right'
         else:
-            # No significant difference detected between any adjacent sensors
-            return None  # Keep previous action (line is out of range)
-    
+            return 'no line detected'
+            
     def output(self, processed_data):
         if processed_data == 'sharp left':
             return 1.0
@@ -80,8 +93,10 @@ class Interpreter:
             return -1.0
         elif processed_data == 'slight right':
             return -0.5
-        else:
+        elif processed_data == 'centered':
             return 0.0
+        else:
+            return -0.5
     
 class Controller:
     def __init__(self, scale=10):
@@ -93,8 +108,8 @@ class Controller:
 
 def main():
     sensor = Sensor()
-    interpreter = Interpreter(sensitivity=100)
-    controller = Controller(scale=30)
+    interpreter = Interpreter(sensitivity=500)
+    controller = Controller(scale=20)
 
     while True:
         sensor_data = sensor.read()
