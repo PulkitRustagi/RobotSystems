@@ -92,7 +92,6 @@ class Controller:
         return angle
 
 def main():
-    px = Picarx()
     sensor = Sensor()
     interpreter = Interpreter()
     controller = Controller()
@@ -105,7 +104,7 @@ def main():
         output_data = interpreter.output(processed_data)
         angle = controller.control(output_data)
         print(f"Changing servo angle to: {angle} to follow the line\n----------------")
-        px.move_discrete('forward', 30, angle=angle, duration=1.0)
+        sensor.px.move_discrete('forward', 30, angle=angle, duration=1.0)
         # sleep(0.1)
     
 main()
