@@ -1,7 +1,6 @@
 import sys
 import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-# print("path: ", sys.path[-1]) 
 from picarx_improved import Picarx
 from time import sleep
 
@@ -42,14 +41,9 @@ class Interpreter:
         left_raw, center_raw, right_raw = sensor_data
 
         # Apply polarity: if polarity=1 (line is darker), invert readings to standardize processing
-        if self.polarity == 1:
-            left_val = 4096 - left_raw
-            center_val = 4096 - center_raw
-            right_val = 4096 - right_raw
-        else:
-            left_val = left_raw
-            center_val = center_raw
-            right_val = right_raw
+        left_val = left_raw
+        center_val = center_raw
+        right_val = right_raw
 
         # Compute differences between adjacent sensors
         diff_left_center = left_val - center_val
@@ -98,18 +92,20 @@ class Controller:
         return angle
 
 def main():
+    px = Picarx()
     sensor = Sensor()
     interpreter = Interpreter()
     controller = Controller()
 
     while True:
         sensor_data = sensor.read()
+        print(f"Sensor data: {sensor_data}")
         processed_data = interpreter.process(sensor_data)
         print(f"Line following maneuver needer: {processed_data}")
         output_data = interpreter.output(processed_data)
         angle = controller.control(output_data)
         print(f"Changing servo angle to: {angle} to follow the line\n----------------")
-        sensor.px.move_discrete('forward', 30, angle=angle, duration=1.0)
+        px.move_discrete('forward', 30, angle=angle, duration=1.0)
         # sleep(0.1)
     
 main()
