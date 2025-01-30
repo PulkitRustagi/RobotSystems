@@ -110,3 +110,5 @@ def main():
         angle = controller.control(output_data)
         print(f"Changing servo angle to: {angle} to follow the line\n----------------")
         sleep(0.1)
+    
+main()
