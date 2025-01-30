@@ -109,7 +109,8 @@ class Picarx(object):
         # --------- ultrasonic init ---------
         trig, echo= ultrasonic_pins
         self.ultrasonic = Ultrasonic(Pin(trig), Pin(echo, mode=Pin.IN, pull=Pin.PULL_DOWN))
-        
+        atexit.register(self.stop) 
+           
     def set_motor_speed(self, motor, speed):
         ''' set motor speed
         
@@ -445,7 +446,7 @@ class Picarx(object):
 
 
     
-    atexit.register(stop)
+    
 
 if __name__ == "__main__":
     px = Picarx()
