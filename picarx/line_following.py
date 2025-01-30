@@ -119,7 +119,7 @@ def main():
         output_data = interpreter.output(processed_data)
         angle = controller.control(output_data)
         print(f"Changing servo angle to: {angle} to follow the line\n----------------")
-        sensor.px.move_discrete('forward', 30, angle=angle, duration=0.2)
+        sensor.px.move_discrete('forward', 40, angle=angle, duration=0.2)
         # sleep(0.1)
     
 main()
