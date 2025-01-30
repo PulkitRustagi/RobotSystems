@@ -96,7 +96,7 @@ class Interpreter:
         elif processed_data == 'centered':
             return 0.0
         else:
-            return 0.5
+            return 0.0
     
 class Controller:
     def __init__(self, scale=10):
@@ -108,7 +108,7 @@ class Controller:
 
 def main():
     sensor = Sensor()
-    interpreter = Interpreter(sensitivity=500)
+    interpreter = Interpreter(sensitivity=50)
     controller = Controller(scale=20)
 
     while True:
