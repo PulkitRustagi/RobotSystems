@@ -108,8 +108,8 @@ class Controller:
 
 def main():
     sensor = Sensor()
-    interpreter = Interpreter(sensitivity=50)
-    controller = Controller(scale=20)
+    interpreter = Interpreter(sensitivity=40)
+    controller = Controller(scale=30)
 
     while True:
         sensor_data = sensor.read()
