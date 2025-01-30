@@ -16,70 +16,97 @@ class Sensor:
 class Interpreter:
     def __init__(self, sensitivity=500, polarity=1):
         """
-        sensitivity: integer threshold for deciding if a pin is 'on' or 'off'
-        polarity: +1 if the line is darker than surrounding floor
-                  -1 if the line is lighter than surrounding floor
+        sensitivity: the minimum difference between adjacent pin values required to detect an edge.
+        polarity: +1 if the line is darker than the surrounding floor
+                  -1 if the line is lighter than the surrounding floor
         """
         self.sensitivity = sensitivity
         self.polarity = polarity
 
     def process(self, sensor_data):
         """
+        Identifies the position of the robot relative to the line using sensor differences.
+
         sensor_data: [left_pin_value, center_pin_value, right_pin_value],
                      each in the range [0, 4096].
-        
+
         Returns a float in [-1, 1] indicating:
           +1   : sharp left
           +0.5 : slight left
            0   : center / no turn
           -0.5 : slight right
           -1   : sharp right
-           None: no sensor pins detect the line (line is out of range)
+           None: line not detected (all differences below sensitivity threshold)
         """
         # Unpack sensor readings
         left_raw, center_raw, right_raw = sensor_data
-        
-        # If polarity=1, the line is darker => raw readings are smaller on the line.
-        # Invert so that a darker (lower) reading becomes a larger "processed" value.
+
+        # Apply polarity: if polarity=1 (line is darker), invert readings to standardize processing
         if self.polarity == 1:
             left_val = 4096 - left_raw
             center_val = 4096 - center_raw
             right_val = 4096 - right_raw
         else:
-            # polarity = -1 => the line is lighter => raw readings are larger on the line.
-            # Keep them as-is (or adjust as needed).
             left_val = left_raw
             center_val = center_raw
             right_val = right_raw
 
-        # Decide if each pin qualifies as "1" (on the line) or "0" (off the line)
-        # based on the sensitivity threshold.
-        left_on = 1 if left_val >= self.sensitivity else 0
-        center_on = 1 if center_val >= self.sensitivity else 0
-        right_on = 1 if right_val >= self.sensitivity else 0
+        # Compute differences between adjacent sensors
+        diff_left_center = left_val - center_val
+        diff_center_left = center_val - left_val
+        diff_right_center = right_val - center_val
+        diff_center_right = center_val - right_val
 
-        # Compare against the patterns you listed:
-        pattern = [left_on, center_on, right_on]
-
-        if pattern == [1, 0, 0]:
-            # Sharp left
-            return 1.0
-        elif pattern == [1, 1, 0]:
-            # Slight left
-            return 0.5
-        elif pattern == [0, 1, 0]:
-            # Centered
-            return 0.0
-        elif pattern == [0, 1, 1]:
-            # Slight right
-            return -0.5
-        elif pattern == [0, 0, 1]:
-            # Sharp right
-            return -1.0
-        elif pattern == [0, 0, 0]:
-            # Line is not detected by any pin => keep going or handle accordingly
-            return None
+        # Determine pattern based on differences exceeding sensitivity
+        if diff_left_center > self.sensitivity:
+            pattern = [1, 0, 0]  # Sharp left
+            return 'sharp left'
+        elif diff_center_right > self.sensitivity:
+            pattern = [1, 1, 0]  # Slight left
+            return 'slight left'
+        elif diff_right_center > self.sensitivity:
+            pattern = [0, 0, 1]  # Sharp right
+            return 'sharp right'
+        elif diff_center_left > self.sensitivity:
+            pattern = [0, 1, 1]  # Slight right
+            return 'slight right'
+        elif diff_center_left > self.sensitivity and diff_center_right > self.sensitivity:
+            pattern = [0, 1, 0]  # Centered
+            return 'centered'
         else:
-            # If you wish to handle additional edge cases or overlapping conditions,
-            # you can specify more logic here. By default, treat them as "center."
+            # No significant difference detected between any adjacent sensors
+            return None  # Keep previous action (line is out of range)
+    
+    def output(self, processed_data):
+        if processed_data == 'sharp left':
+            return 1.0
+        elif processed_data == 'slight left':
+            return 0.5
+        elif processed_data == 'sharp right':
+            return -1.0
+        elif processed_data == 'slight right':
+            return -0.5
+        else:
             return 0.0
+    
+class Controller:
+    def __init__(self, scale=10):
+        self.scale = scale
+
+    def control(self, offset):
+        angle = offset * self.scale
+        return angle
+
+def main():
+    sensor = Sensor()
+    interpreter = Interpreter()
+    controller = Controller()
+
+    while True:
+        sensor_data = sensor.read()
+        processed_data = interpreter.process(sensor_data)
+        print(f"Line following maneuver needer: {processed_data}")
+        output_data = interpreter.output(processed_data)
+        angle = controller.control(output_data)
+        print(f"Changing servo angle to: {angle} to follow the line\n----------------")
+        sleep(0.1)
