@@ -44,15 +44,15 @@ class ADC(I2C):
         :rtype: int
         """
         # Write register address
-        # self.write([self.chn, 0, 0])
+        self.write([self.chn, 0, 0])
         # Read values
-        # msb, lsb = super().read(2)
+        msb, lsb = super().read(2)
 
         # Combine MSB and LSB
-        # value = (msb << 8) + lsb
-        # self._debug(f"Read value: {value}")
-        # return value
-        return 0
+        value = (msb << 8) + lsb
+        self._debug(f"Read value: {value}")
+        return value
+        # return 0
 
     def read_voltage(self):
         """
