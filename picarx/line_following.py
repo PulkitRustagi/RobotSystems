@@ -86,13 +86,13 @@ class Interpreter:
             
     def output(self, processed_data):
         if processed_data == 'sharp left':
-            return 1.0
-        elif processed_data == 'slight left':
-            return 0.5
-        elif processed_data == 'sharp right':
             return -1.0
-        elif processed_data == 'slight right':
+        elif processed_data == 'slight left':
             return -0.5
+        elif processed_data == 'sharp right':
+            return 1.0
+        elif processed_data == 'slight right':
+            return 0.5
         elif processed_data == 'centered':
             return 0.0
         else:
