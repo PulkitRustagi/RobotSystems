@@ -12,7 +12,6 @@ from sensing_and_control.interpreter import Interpreter
 from sensing_and_control.controller import Controller
 
 def line_following(picar):
-    # Instantiate sensor, interpreter, and controller objects
     sensor = Sensor()
     interpreter = Interpreter()
     controller = Controller()
@@ -29,7 +28,6 @@ def line_following(picar):
         pass
 
 def main():
-    # Instantiate your Picarx object
     px = Picarx()
     line_following(px)
     px.stop()

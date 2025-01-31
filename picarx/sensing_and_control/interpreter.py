@@ -1,14 +1,13 @@
 import numpy as np
 
 class Interpreter():
-    def __init__(self, line_threshold=35, sensitivity=1.0, is_dark_line=True):
+    def __init__(self, line_threshold=30, sensitivity=1.0, is_dark_line=True):
         # class variables
         self.sensitivity = sensitivity
         self.is_dark_line = is_dark_line
         self.line_threshold = line_threshold
         self.sensor_with_line_last_detected = 1
         self.prev_turn_proportion = 0
-        # storage for PID controller
         self.last_error = 0
         self.sum_error = 0
 
