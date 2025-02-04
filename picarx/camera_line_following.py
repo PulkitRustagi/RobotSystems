@@ -79,6 +79,7 @@ if __name__ == "__main__":
         line_position = interpret.line_position_camera(sensing.path, sensing.name) # returns a float between -1 and 1
         controller.follow_line(sensing.px, line_position) # sets the direction of the servo and the speed of the car
         time.sleep(0.1)
+        # break if intrerrupted
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
     sensing.px.stop()
