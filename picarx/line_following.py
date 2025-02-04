@@ -29,6 +29,7 @@ def line_following(picar):
 
 def main():
     px = Picarx()
+    px.set_cam_tilt_angle(10)
     line_following(px)
     px.stop()
 
