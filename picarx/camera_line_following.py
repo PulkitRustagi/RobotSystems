@@ -36,6 +36,7 @@ class Interpretation():
         thresholds to find line to follow, sets coordinate to -1 if line on 
         far left of screen, sets to 1 if on far right of screen"""
         camera_data = cv2.imread(f'{image_path}/{image_name}.png')
+        print("camera data is None-> ", camera_data==None)
         grayscale = cv2.cvtColor(camera_data, cv2.COLOR_BGR2GRAY)
         # Threshold
         if self.polarity == 1:
