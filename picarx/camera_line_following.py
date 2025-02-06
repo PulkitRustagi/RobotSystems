@@ -16,7 +16,7 @@ class Sensing():
         self.image_counter = 0
         if camera:
             print("Camera is on")
-            self.px.set_cam_tilt_angle(-20)
+            self.px.set_cam_tilt_angle(-30)
             time.sleep(0.1)
             Vilib.camera_start(vflip=False,hflip=False)
             Vilib.display(local=True,web=True)
