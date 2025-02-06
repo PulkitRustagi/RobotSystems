@@ -13,18 +13,21 @@ logging.getLogger().setLevel(logging.DEBUG)
 class Sensing():
     def __init__(self, camera=False):
         self.px = Picarx()
+        # self.image_counter = 0
         if camera:
             self.px.set_cam_tilt_angle(-10)
             time.sleep(0.1)
             Vilib.camera_start(vflip=False,hflip=False)
             Vilib.display(local=True,web=True)
             self.name = 'img'
-            self.path = f"picarx/images"
+            self.path = f"picarx"
             time.sleep(0.5)
 
     def get_camera_image(self):
         # function that gets a camera image
         Vilib.take_photo(self.name, self.path)
+        # now save it in the current folder
+        cv2.imwrite(f'{self.path}/{self.name}.png', Vilib.img)
 
 class Interpretation():
     def __init__(self, sensitivity=1, polarity=1):
@@ -36,7 +39,9 @@ class Interpretation():
         thresholds to find line to follow, sets coordinate to -1 if line on 
         far left of screen, sets to 1 if on far right of screen"""
         camera_data = cv2.imread(f'{image_path}/{image_name}.png')
-        print("camera data is None-> ", camera_data==None)
+        if camera_data is None:
+            print("camera data is None")
+            
         grayscale = cv2.cvtColor(camera_data, cv2.COLOR_BGR2GRAY)
         # Threshold
         if self.polarity == 1:
