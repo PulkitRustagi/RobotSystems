@@ -13,7 +13,7 @@ logging.getLogger().setLevel(logging.DEBUG)
 class Sensing():
     def __init__(self, camera=False):
         self.px = Picarx()
-        # self.image_counter = 0
+        self.image_counter = 0
         if camera:
             print("Camera is on")
             self.px.set_cam_tilt_angle(-20)
@@ -31,20 +31,24 @@ class Sensing():
         # function that gets a camera image
         Vilib.take_photo(self.name, self.path)
         # now save it in the current folder
-        cv2.imwrite(f'{self.path}/{self.name}.png', Vilib.img)
+        cv2.imwrite(f'{self.path}/{self.name}{self.image_counter}.png', Vilib.img)
+        self.image_counter += 1
 
 class Interpretation():
     def __init__(self, sensitivity=1, polarity=1):
         self.sensitivity = sensitivity
         self.polarity = polarity 
+        self.image_id = 0
 
     def line_position_camera(self, image_path, image_name):
         """Takes camera data and uses OpenCV to convert to grayscale image, 
         thresholds to find line to follow, sets coordinate to -1 if line on 
         far left of screen, sets to 1 if on far right of screen"""
-        camera_data = cv2.imread(f'{image_path}/{image_name}.png')
+        camera_data = cv2.imread(f'{image_path}/{image_name}{self.image_id}.png')
+        self.image_id += 1
         if camera_data is None:
-            print("camera data is None")
+            print("\n\ncamera data is None")
+            exit(0)
             
         grayscale = cv2.cvtColor(camera_data, cv2.COLOR_BGR2GRAY)
         # Threshold
