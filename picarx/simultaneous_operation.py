@@ -12,15 +12,12 @@ from readerwriterlock import rwlock
 class Bus:
     def __init__(self, initial_value=None):
         self.message = initial_value
-        self.lock = rwlock.RWLockWriteD()
 
     def write(self, new_message):
-        with self.lock.gen_wlock():
-            self.message = new_message
+        self.message = new_message
 
     def read(self):
-        with self.lock.gen_rlock():
-            return self.message
+        return self.message
 
 def sensor_function(sensor_bus, delay, shutdown_event):
     while not shutdown_event.is_set():
