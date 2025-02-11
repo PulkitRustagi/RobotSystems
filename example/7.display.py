@@ -54,7 +54,7 @@ def qrcode_detect():
 def take_photo():
     _time = strftime('%Y-%m-%d-%H-%M-%S',localtime(time()))
     name = 'photo_%s'%_time
-    name = 'test_image'
+    name = 'test_image2'
     username = os.getlogin()
 
     path = f"/home/{username}/Pictures/"

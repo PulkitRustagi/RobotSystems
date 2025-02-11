@@ -36,7 +36,7 @@ class Bus:
 def sensor(bus1, sensor_delay):
     Vilib.camera_start(vflip=False,hflip=False)
     name = 'IMAGE'
-    path = f"picarx/"
+    path = "picarx/"
     Vilib.take_photo(name, path)
     print('photo save as %s%s.jpg'%(path,name))
 
@@ -54,7 +54,7 @@ def sensor(bus1, sensor_delay):
         if status:
             full_path = f"{path}/{name}.jpg"
             if Vilib.img is not None and isinstance(Vilib.img, np.ndarray):
-                cv2.imwrite(full_path, Vilib.img)  # Save the image
+                # cv2.imwrite(full_path, Vilib.img)  # Save the image
                 print(f"Image {name} saved\n")
                 t += 1
                 frame = cv2.imread(f'{path}/{name}.jpg')
