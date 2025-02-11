@@ -46,6 +46,7 @@ def sensor(bus1, sensor_delay):
         path = "picarx"
 
         status = Vilib.take_photo(name, path)
+        print("Status of taking photo: ", status)
         if status:
             full_path = f"{path}/{name}.jpg"
             if Vilib.img is not None and isinstance(Vilib.img, np.ndarray):
