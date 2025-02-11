@@ -24,7 +24,9 @@ class Bus:
             return(self.message, self.identifier)
 
     def write(self, data, identifier = None):
+       print("Trying Writing to bus so I code is at point 1")
        with self.lock.gen_wlock():
+            print("Also got into the with block")
             self.message = data
             self.identifier = identifier
             print(f"Data written to bus: {identifier}")
@@ -45,8 +47,12 @@ def sensor(bus1, sensor_delay):
             full_path = f"{path}/{name}.jpg"
             if Vilib.img is not None and isinstance(Vilib.img, np.ndarray):
                 cv2.imwrite(full_path, Vilib.img)  # Save the image
+                print(f"Image {name} saved\n")
                 t += 1
                 frame = cv2.imread(f'{path}/{name}.jpg')
+                if frame is None:
+                    print(f"No frame available at {path}/{name}.jpg")
+                    exit(0)
                 bus1.write(frame, name)
                 print(f"Image {name} sent via bus1\n")
             else:
