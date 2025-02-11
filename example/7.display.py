@@ -54,9 +54,11 @@ def qrcode_detect():
 def take_photo():
     _time = strftime('%Y-%m-%d-%H-%M-%S',localtime(time()))
     name = 'photo_%s'%_time
+    name = 'test_image'
     username = os.getlogin()
 
     path = f"/home/{username}/Pictures/"
+    path = f"picarx/"
     Vilib.take_photo(name, path)
     print('photo save as %s%s.jpg'%(path,name))
 
