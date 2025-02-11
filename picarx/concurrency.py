@@ -27,6 +27,7 @@ class Bus:
        with self.lock.gen_wlock():
             self.message = data
             self.identifier = identifier
+            print(f"Data written to bus: {identifier}")
 
 
 
