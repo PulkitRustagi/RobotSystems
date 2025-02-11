@@ -38,6 +38,8 @@ def sensor(bus1, sensor_delay):
     Vilib.display()
     time.sleep(0.2)
     t = 1
+    print("Sensor started")
+    exit(0)
     while not shutdown_event.is_set():
         name = f"image{t}"  
         path = "picarx"
