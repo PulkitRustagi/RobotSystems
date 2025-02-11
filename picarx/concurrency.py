@@ -41,6 +41,7 @@ def sensor(bus1, sensor_delay):
     print("Sensor started")
     exit(0)
     while not shutdown_event.is_set():
+        print("Trying to take photo")
         name = f"image{t}"  
         path = "picarx"
 
