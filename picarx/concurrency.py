@@ -34,16 +34,20 @@ class Bus:
 
 
 def sensor(bus1, sensor_delay):
-    Vilib.camera_start()
-    Vilib.display()
+    Vilib.camera_start(vflip=False,hflip=False)
+    name = 'IMAGE'
+    path = f"picarx/"
+    Vilib.take_photo(name, path)
+    print('photo save as %s%s.jpg'%(path,name))
+
     time.sleep(0.2)
     t = 1
     print("Sensor started")
     print("Shutting event is set: ", shutdown_event.is_set())
     while not shutdown_event.is_set():
         print("Trying to take photo")
-        name = f"image{t}"  
-        path = "picarx"
+        name = f"IMAGE{t}"  
+        path = "picarx/"
 
         status = Vilib.take_photo(name, path)
         print("Status of taking photo: ", status)
