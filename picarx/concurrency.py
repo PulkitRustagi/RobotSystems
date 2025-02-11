@@ -126,7 +126,7 @@ def main():
 
     # Set delay for loops based on polling speeds
     # Sense > Interpret > Contol
-    sensor_delay  = 0.05
+    sensor_delay  = 0.02
     interp_delay  = 0.10
     control_delay = 0.20
 
