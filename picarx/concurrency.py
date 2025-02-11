@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 from vilib import Vilib
 from picarx_improved import Picarx
-from picarx.sensing_and_control.CONTROL import Controller as CONTROLLER
+from sensing_and_control.CONTROL import Controller as CONTROLLER
 from time import sleep
 from concurrent.futures import ThreadPoolExecutor
 from threading import Event
