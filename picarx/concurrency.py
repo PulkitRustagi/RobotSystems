@@ -1,19 +1,32 @@
 import cv2
 import numpy as np
-from vilib import Vilib
 from picarx_improved import Picarx
 from sensing_and_control.CONTROL import Controller as CONTROLLER
 from time import sleep
 from concurrent.futures import ThreadPoolExecutor
 from threading import Event
 from readerwriterlock import rwlock
-import time
+from vilib import Vilib
+from time import sleep, time
+
 
 # Define shutdown event
 shutdown_event = Event()
 
-class Bus:
 
+def take_photo(t):
+    Vilib.camera_start(vflip=False,hflip=False)
+    name = f'cam_image{t}'
+    path = f'picarx/'
+    Vilib.take_photo(name, path)
+    img = cv2.imread(f'{path}{name}.jpg')
+    if img is None:
+        print(f"---------------\nNo image available at {path}{name}.jpg")
+        exit(0)
+    return img
+
+
+class Bus:
     def __init__(self):
         self.message = None
         self.lock = rwlock.RWLockWriteD()
@@ -34,34 +47,20 @@ class Bus:
 
 
 def sensor(bus1, sensor_delay):
-    Vilib.camera_start(vflip=False,hflip=False)
-    name = 'IMAGE'
-    path = "picarx/"
-    Vilib.take_photo(name, path)
-    print('photo save as %s%s.jpg'%(path,name))
-
-    time.sleep(0.2)
     t = 1
+    name = f'cam_image{t}'
+    path = f'picarx/'
+    time.sleep(0.2)
     print("Sensor started")
     print("Shutting event is set: ", shutdown_event.is_set())
     while not shutdown_event.is_set():
-        print("Trying to take photo")
-        name = f"IMAGE{t}"  
-        path = "picarx/"
-
-        status = Vilib.take_photo(name, path)
-        print("Status of taking photo: ", status)
-        if status:
-            full_path = f"{path}/{name}.jpg"
-            if Vilib.img is not None and isinstance(Vilib.img, np.ndarray):
-                # cv2.imwrite(full_path, Vilib.img)  # Save the image
-                print(f"Image {name} saved\n")
-                t += 1
-                frame = cv2.imread(f'{path}/{name}.jpg')
-                if frame is None:
-                    print(f"No frame available at {path}/{name}.jpg")
-                    exit(0)
-                bus1.write(frame, name)
+        print("Trying to take photo\n\n")
+        img = take_photo(t)
+        t += 1
+        print("Status of taking photo: ", img!=None)
+        if img is not None:
+            if isinstance(Vilib.img, np.ndarray):
+                bus1.write(img, name)
                 print(f"Image {name} sent via bus1\n")
             else:
                 print("No image available")
