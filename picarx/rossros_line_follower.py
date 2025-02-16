@@ -1,194 +1,226 @@
-#!/usr/bin/env python3
 """
-Example: Multimodal Control with RossROS
-----------------------------------------
-Demonstrates how to use RossROS to handle two sensor streams:
-1) A line sensor (camera or photocells) for line following
-2) An ultrasonic sensor to detect obstacles
+Camera-Based Line Follower with Obstacle Detection (Ultrasonic Sensor)
 
-We run concurrent Producer, ConsumerProducer, and Consumer threads that share data via Busses,
-and a Timer that terminates everything after a set duration.
+This script initializes a PiCar-X, reads camera frames to detect a line,
+and steers accordingly. It also reads from an ultrasonic sensor to stop
+the car if an obstacle is detected within a safe distance.
 
-Adapt sensor reads, control logic, and thresholds to your specific hardware.
+References:
+1. OpenCV Documentation: https://docs.opencv.org/
+2. Python Logging Documentation: https://docs.python.org/3/howto/logging.html
+3. SunFounder PiCar-X Documentation: https://www.sunfounder.com/learn/
+4. rossros Library: https://pypi.org/project/rossros/
 """
 
 import time
 import logging
+import cv2
+import numpy as np
+from vilib import Vilib
+from picarx_improved import Picarx
+from sensing_and_control.CONTROL import Controller as CONTROLLER
+import rossros as rr 
 
-# If RossROS.py is in the same directory, this import should work:
-from RossROS import Bus, Producer, ConsumerProducer, Consumer, Timer
+logging.getLogger().setLevel(logging.INFO)
 
-# (Optional) If you're using PiCar-X, you might import:
-# from picarx import Picarx
+# Global objects and constants
+px = Picarx()
+SAFE_DISTANCE = 50
+DRIVE_SPEED = 30
+FRAME_THRESHOLD = 60
 
-###############################################################################
-#                             Sensor / Interpreter / Controller Functions
-###############################################################################
-
-def line_sensor_function():
+def sensor_cam():
     """
-    Reads line sensor data (e.g., camera or photocells).
-    Return a dict representing raw sensor values or partial processing.
-    For demonstration, we return a placeholder.
+    Captures a single image from the camera and returns it as a NumPy array.
     """
-    # e.g.:
-    # line_value = read_line_sensors() or compute_camera_line_offset()
-    # return {"line_raw": line_value}
-    return {"line_raw": 123}  # Placeholder
+    Vilib.camera_start()
+    Vilib.display()
+    time.sleep(0.2)
+
+    t = 1
+    name = f"image{t}"
+    path = "picarx/"
+    status = Vilib.take_photo(name, path)
+
+    if status and Vilib.img is not None and isinstance(Vilib.img, np.ndarray):
+        full_path = f"{path}/{name}.jpg"
+        cv2.imwrite(full_path, Vilib.img)
+        captured_frame = cv2.imread(full_path)
+        return captured_frame
+    else:
+        logging.warning("Failed to capture a valid image from camera.")
+        return None
 
 
-def line_interpreter_function(input_data):
+def interpretter_cam(frame):
     """
-    Interprets line sensor data to produce an offset or steering guide.
-    input_data is the dict from line_sensor_function (e.g., {"line_raw": 123}).
-    Return a dict of interpreted values, e.g., {"line_offset": 0.25}.
+    Processes the captured frame to find the largest contour (presumed to be the line).
+    Calculates the x-ratio with respect to the image center.
+
+    Returns:
+        float: x_ratio in the range [-1, 1], representing how far off-center the line is.
     """
-    # Example placeholder logic:
-    raw_val = input_data["line_raw"]
-    # Suppose we pretend the offset is some function of raw_val
-    offset = (raw_val - 120) / 100.0  # Arbitrary placeholder
-    return {"line_offset": offset}
+    if frame is None:
+        logging.warning("No frame available.")
+        return None
+
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    _, binary = cv2.threshold(gray, FRAME_THRESHOLD, 255, cv2.THRESH_BINARY_INV)
+
+    frame_height, frame_width = frame.shape[:2]
+    lower_half = binary[frame_height // 2:, :]
+
+    contours, _ = cv2.findContours(lower_half, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    if not contours:
+        logging.warning("No contours found in frame.")
+        return None
+
+    center_line = max(contours, key=cv2.contourArea)
+    centroid = cv2.moments(center_line)
+
+    if centroid['m00'] == 0:
+        logging.warning("No valid centroid found in the largest contour.")
+        return None
+
+    x_center = int(centroid['m10'] / centroid['m00'])
+    x_ratio = (x_center - frame_width / 2) / (frame_width / 2)
+    return x_ratio
 
 
-def ultrasonic_sensor_function():
+def angle_controller(x_ratio):
     """
-    Reads the ultrasonic distance (in cm, for example) and returns a dict.
-    E.g., on PiCar-X: distance = px.get_distance()
+    Adjusts the steering angle of the PiCar-X based on the x_ratio of the line center.
+
+    Args:
+        x_ratio (float): Value in [-1, 1] representing how far off-center the line is.
     """
-    # distance = px.get_distance()  # Actual call if using PiCar-X
-    distance = 50  # Placeholder
-    return {"distance": distance}
-
-
-def ultrasonic_interpreter_function(input_data):
-    """
-    Interprets ultrasonic data and returns whether an obstacle is detected.
-    input_data = {"distance": <float>}
-    """
-    distance = input_data["distance"]
-    threshold = 20.0  # cm; obstacle if distance < threshold
-    obstacle_detected = (distance is not None) and (distance < threshold)
-    return {"obstacle_detected": obstacle_detected}
-
-
-def combined_controller_function(input_list):
-    """
-    Reads from 2 inputs:
-       1) line_data (e.g., {"line_offset": 0.25})
-       2) ultrasonic_data (e.g., {"obstacle_detected": True/False})
-    Decides motor/steering commands.
-
-    You can integrate a PiCar-X control by creating a Picarx() instance 
-    outside in the main thread and referencing it globally, or using 
-    a function closure approach. For demonstration, we just log actions.
-    """
-    line_data, us_data = input_list
-
-    # If we haven't gotten valid data yet, do nothing
-    if (line_data is None) or (us_data is None):
-        logging.info("No data yet. Controller idle.")
+    if x_ratio is None:
         return
 
-    line_offset = line_data.get("line_offset", 0.0)
-    obstacle = us_data.get("obstacle_detected", False)
+    # Negate to adjust direction if necessary
+    adjustment = -1 * x_ratio
+    control = CONTROLLER(px, scale_factor=30)
+    control.align_steering(adjustment)
 
-    if obstacle:
-        # Example: stop the motors if an obstacle is detected
-        # px.stop()
-        logging.info(f"Obstacle detected! Stopping. Offset was {line_offset:.2f}")
+
+# ------------------------------------------------
+# Ultrasonic Sensor Functions
+# ------------------------------------------------
+def sonic_sensor():
+    """
+    Reads the distance from the ultrasonic sensor.
+
+    Returns:
+        float: distance in centimeters, rounded to two decimals.
+    """
+    return round(px.ultrasonic.read(), 2)
+
+
+def sonic_stop(distance):
+    """
+    Based on the distance from the ultrasonic sensor, either moves or stops the PiCar-X.
+
+    Args:
+        distance (float): The current distance reading from the ultrasonic sensor.
+    """
+    if distance < SAFE_DISTANCE:
+        px.stop()
     else:
-        # Example: line-following
-        # px.set_dir_servo_angle( line_offset * GAIN )
-        # px.forward(speed)
-        logging.info(f"No obstacle. Following line. Offset={line_offset:.2f}")
+        px.forward(DRIVE_SPEED)
 
 
-###############################################################################
-#                                     MAIN
-###############################################################################
-
+# ------------------------------------------------
+# Main Execution (Concurrently)
+# ------------------------------------------------
 def main():
-    logging.basicConfig(level=logging.INFO)
-    logging.info("Starting Multimodal Control Demo with RossROS...")
+    """
+    Sets up concurrency tasks for:
+      1. Camera capture and line interpretation
+      2. Angle control
+      3. Ultrasonic reading and obstacle stopping
+      4. (Optional) Data printing and timer for demonstration
+    """
 
-    # 1. Create your bus objects
-    line_sensor_bus = Bus()               # raw line data
-    line_interpreter_bus = Bus()          # interpreted line offset
-    ultrasonic_bus = Bus()                # raw distance data
-    ultrasonic_interpreter_bus = Bus()    # obstacle status
-    termination_bus = Bus(False)          # read by all to know when to stop
+    # Buses for data exchange
+    camera_bus = rr.Bus(None, "Camera Bus")
+    interpretter_bus = rr.Bus(None, "Interpretation Bus")
+    ultrasonic_bus = rr.Bus(None, "Ultrasonic Bus")
+    bus_terminate = rr.Bus(0, "Termination Bus")
 
-    # 2. Define your Producers / ConsumerProducers / Consumers / Timer
-
-    # --- Producer for line sensor ---
-    line_sensor_producer = Producer(
-        producer_function=line_sensor_function,
-        output_bus=line_sensor_bus,
-        termination_busses=[termination_bus],
-        delay=0.2  # read line sensor ~5 times/sec
+    # Camera tasks
+    camera_writer = rr.Producer(
+        sensor_cam,   # function generating camera frames
+        camera_bus,      # bus to store camera frames
+        0.05,         # delay
+        bus_terminate,  # termination bus
+        "Camera Capture"
     )
 
-    # --- ConsumerProducer for line interpretation ---
-    line_interpreter_consumerproducer = ConsumerProducer(
-        consumer_function=line_interpreter_function,
-        input_busses=[line_sensor_bus],
-        output_bus=line_interpreter_bus,
-        termination_busses=[termination_bus],
-        delay=0.2
+    interp_reader_writer = rr.ConsumerProducer(
+        interpretter_cam,    # function processing frames to produce x_ratio
+        camera_bus,       # input bus for frames
+        interpretter_bus,    # output bus for x_ratio
+        0.05,
+        bus_terminate,
+        "Line Interpretation"
     )
 
-    # --- Producer for ultrasonic sensor ---
-    ultrasonic_producer = Producer(
-        producer_function=ultrasonic_sensor_function,
-        output_bus=ultrasonic_bus,
-        termination_busses=[termination_bus],
-        delay=0.2  # read ultrasonic sensor ~5 times/sec
+    angle_controller_consumer = rr.Consumer(
+        angle_controller,  # function processing x_ratio
+        interpretter_bus,        # input bus
+        0.05,
+        bus_terminate,
+        "Steering Control"
     )
 
-    # --- ConsumerProducer for ultrasonic interpretation ---
-    ultrasonic_interpreter_consumerproducer = ConsumerProducer(
-        consumer_function=ultrasonic_interpreter_function,
-        input_busses=[ultrasonic_bus],
-        output_bus=ultrasonic_interpreter_bus,
-        termination_busses=[termination_bus],
-        delay=0.2
+    # Ultrasonic tasks
+    sonic_writer = rr.Producer(
+        sonic_sensor,
+        ultrasonic_bus,
+        0.05,
+        bus_terminate,
+        "Ultrasonic Reader"
     )
 
-    # --- Consumer for combined control ---
-    # Reads line_interpreter_bus and ultrasonic_interpreter_bus
-    combined_controller_consumer = Consumer(
-        consumer_function=combined_controller_function,
-        input_busses=[line_interpreter_bus, ultrasonic_interpreter_bus],
-        termination_busses=[termination_bus],
-        delay=0.1
+    sonic_reader = rr.Consumer(
+        sonic_stop,
+        ultrasonic_bus,
+        0.05,
+        bus_terminate,
+        "Obstacle Stop"
     )
 
-    # --- Timer (Producer) for automatic termination after 30s ---
-    run_time = 30.0
-    timer_producer = Timer(
-        t_duration=run_time,
-        output_bus=termination_bus
+    # (Optional) Printer for debugging
+    printer = rr.Printer(
+        (camera_bus, interpretter_bus, ultrasonic_bus, bus_terminate),
+        0.25,
+        bus_terminate,
+        "Data Printer",
+        "Data bus readings: "
     )
 
-    # 3. Put all processes in a list
-    process_list = [
-        line_sensor_producer,
-        line_interpreter_consumerproducer,
-        ultrasonic_producer,
-        ultrasonic_interpreter_consumerproducer,
-        combined_controller_consumer,
-        timer_producer
+    # (Optional) Termination timer (run for 5 seconds)
+    termination_timer = rr.Timer(
+        bus_terminate,
+        5,
+        0.01,
+        bus_terminate,
+        "Termination Timer"
+    )
+
+    # List of all producer-consumers to run
+    producer_consumer_list = [
+        camera_writer,
+        interp_reader_writer,
+        angle_controller_consumer,
+        sonic_writer,
+        sonic_reader,
+        # Uncomment if you want to use:
+        # printer,
+        # termination_timer
     ]
 
-    # 4. Start them all
-    for process in process_list:
-        process.start()
-
-    # 5. Wait for them to finish (i.e., until termination_bus becomes True)
-    for process in process_list:
-        process.join()
-
-    logging.info("All processes have shut down. Exiting program.")
+    rr.runConcurrently(producer_consumer_list)
 
 
 if __name__ == "__main__":

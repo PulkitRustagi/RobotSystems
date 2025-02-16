@@ -14,10 +14,10 @@ except ImportError:
     on_robot = False
 
 class Controller():
-    def __init__(self, max_turn_angle=30):
-        self.max_turn_angle=max_turn_angle
-        self.turn_servo = Servo("P2")
+    def __init__(self, Picar, scale_factor = 30):
+        self.scale_factor = -scale_factor
+        self.px = Picar
 
-    def set_turn_proportion(self, turn_proportion):
-        turn_angle = float(self.max_turn_angle*turn_proportion)
-        self.turn_servo.angle(turn_angle)
+    def align_steering(self,offset):
+        servo_angle = offset*self.scale_factor
+        self.px.set_dir_servo_angle(servo_angle)

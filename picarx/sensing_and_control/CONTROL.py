@@ -55,6 +55,6 @@ class Controller():
         self.scale_factor = -scale_factor
         self.px = Picar
 
-    def correct_car(self,offset):
+    def align_steering(self,offset):
         servo_angle = offset*self.scale_factor
         self.px.set_dir_servo_angle(servo_angle)
