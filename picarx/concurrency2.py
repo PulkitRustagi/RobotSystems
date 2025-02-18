@@ -1,103 +1,182 @@
-from picarx_improved import Picarx
-import logging
-import time
 import cv2
-import time
-import io
 import numpy as np
 from vilib import Vilib
-logging_format = "%(asctime)s: %(message)s"
-logging.basicConfig(format=logging_format, level=logging.INFO, datefmt="%H:%M:%S")
-logging.getLogger().setLevel(logging.DEBUG)
+from picarx_improved import Picarx
+from sensing_and_control.CONTROL import Controller as CONTROL
+from time import sleep
+from concurrent.futures import ThreadPoolExecutor
+from threading import Event
+from readerwriterlock import rwlock
+import time
 
-class Sensing():
-    def __init__(self, camera=False):
-        self.px = Picarx()
-        self.image_counter = 0
-        if camera:
-            print("Camera is on")
-            self.px.set_cam_tilt_angle(-30)
-            time.sleep(0.1)
-            Vilib.camera_start(vflip=False,hflip=False)
-            Vilib.display(local=True,web=True)
-            self.name = 'img'
-            self.path = f"picarx"
-            time.sleep(0.5)
-        else:
-            print("Camera is off")
-            exit(0)
+px = Picarx()
 
-    def get_camera_image(self):
-        # function that gets a camera image
-        Vilib.take_photo(self.name, self.path)
-        # now save it in the current folder
-        cv2.imwrite(f'{self.path}/{self.name}{self.image_counter}.png', Vilib.img)
-        self.image_counter += 1
+# Define shutdown event
+shutdown_event = Event()
 
-class Interpretation():
-    def __init__(self, sensitivity=1, polarity=1):
-        self.sensitivity = sensitivity
-        self.polarity = polarity 
-        self.image_id = 0
+class Bus:
+    def __init__(self):
+        self.message = None
+        self.lock = rwlock.RWLockWriteD()
+        self.identifier = None
 
-    def line_position_camera(self, image_path, image_name):
-        """Takes camera data and uses OpenCV to convert to grayscale image, 
-        thresholds to find line to follow, sets coordinate to -1 if line on 
-        far left of screen, sets to 1 if on far right of screen"""
-        camera_data = cv2.imread(f'{image_path}/{image_name}{self.image_id}.png')
-        self.image_id += 1
-        if camera_data is None:
-            print("\n\ncamera data is None")
-            exit(0)
-            
-        grayscale = cv2.cvtColor(camera_data, cv2.COLOR_BGR2GRAY)
-        # Threshold
-        if self.polarity == 1:
-            # Lighter line
-            _, binary = cv2.threshold(grayscale, 200, 255, cv2.THRESH_BINARY)  
-        else:
-            # Darker line
-            _, binary = cv2.threshold(grayscale, 50, 255, cv2.THRESH_BINARY_INV) 
+    def read(self):
+        with self.lock.gen_rlock():
+            return(self.message, self.identifier)
 
-        contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        if not contours:
-            return 0.0
+    def write(self, data, identifier = None):
+       with self.lock.gen_wlock():
+            self.message = data
+            self.identifier = identifier
 
-        largest_contour = max(contours, key=cv2.contourArea)
-        x, y, w, h = cv2.boundingRect(largest_contour)
-        line_center = x + w / 2
-        frame_center = camera_data.shape[1] / 2
-        normalized_position = (line_center - frame_center) / frame_center
-        print(f"Normalized position: {normalized_position}")
+bus12 = Bus()  #Bus instance for transfer from sensor to interpreter
 
-        return normalized_position
+bus23 = Bus() #Bus instance for transfer from interpreter to controller
+
+sensor_delay = 0.02
+interp_delay = 0.1
+control_delay = 0.2
+#Producer function
+def sensor(bus12, sensor_delay):
+
+    Vilib.camera_start()
+    Vilib.display()
+    time.sleep(0.2)
+    t = 1
+    while not shutdown_event.is_set():
+        name = f"image{t}"  
+        path = "picarx"
+
+        status = Vilib.take_photo(name, path)
+        if status:
+            full_path = f"{path}/{name}.jpg"
+            if Vilib.img is not None and isinstance(Vilib.img, np.ndarray):
+                cv2.imwrite(full_path, Vilib.img)  # Save the image
+                t += 1
+                frame = cv2.imread(f'{path}/{name}.jpg')
+                #print("Image", t, "saved successfully.")
+                bus12.write(frame, name)
+                print(f"Image {name} written to bus12")
+                print
+                
+            else:
+                print("Image not valid")
+                continue
+
+        time.sleep(sensor_delay)
     
-class Controller():
-    def __init__(self, scaling_factor=30):
-        self.angle_scale = scaling_factor+5
+#Read and write function
+
+def interpreter(bus12, bus23,interp_delay):
+
+    while not shutdown_event.is_set():
+        frame, identifier = bus12.read()
+
+        if frame is None:
+            print("No frame available")
+            time.sleep(interp_delay)  # Sleep briefly to avoid busy waiting
+            continue
+
+        print(f"{identifier} picked up from bus 12")
+
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         
-    def follow_line(self, px, line_position):
-        if -0.1 < line_position < 0.1:
-            px.set_dir_servo_angle(0)
-            px.forward(25)
+        #Get binary image
+        _, binary = cv2.threshold(gray, 60, 255, cv2.THRESH_BINARY_INV)
+        
+        #Focus on bottom half of image
+        frame_height = frame.shape[0]
+        frame_width = frame.shape[1]
+
+        lower_half = binary[frame_height//2:,:]
+        #Find contours
+        contours, _ = cv2.findContours(lower_half, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        
+        center_line = max(contours, key = cv2.contourArea)
+
+        
+        # Find centroid point of the largest contour
+        centroid = cv2.moments(center_line)
+        if centroid['m00'] !=0:
+            x_center = int(centroid['m10'] / centroid['m00'])
+            x_ratio = (x_center - frame_width / 2) / (frame_width / 2) #Get x in terms of -1 to 1
+            # Draw a red dot at the x_center position
+            # cv2.circle(frame, (x_center, frame.shape[0] // 2), 5, (0, 0, 255), -1)  # Red dot
+            # # Save the modified image
+            # cv2.imwrite(f'{path}/{name}.jpg', frame)
+
+        if x_ratio is not None:
+            bus23.write(x_ratio)
+            print("x_ratio written to bus23", x_ratio)
         else:
-            px.set_dir_servo_angle(line_position*self.angle_scale)
-            px.forward(25)
+            print("x was None")
 
-if __name__ == "__main__":
-    sensing = Sensing(camera=True)
-    interpret = Interpretation(sensitivity=2.0, polarity=-1)
-    controller = Controller(scaling_factor=30)
+        time.sleep(interp_delay)
 
-    while True:
-        sensing.get_camera_image()  # stores the image in the path specified in the Sensing class "picarx/images"
-        line_position = interpret.line_position_camera(sensing.path, sensing.name) # returns a float between -1 and 1
-        controller.follow_line(sensing.px, line_position) # sets the direction of the servo and the speed of the car
-        time.sleep(0.1)
-        # break if intrerrupted
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            break
-    sensing.px.stop()
-    Vilib.camera_stop()
-    Vilib.display(local=False,web=False)
-    logging.info("Exiting program")
+
+#Consumer function -- Changes angle based on x_value
+def controller(bus23,control_delay):
+    C = CONTROL(px, scale_factor = 30)
+    
+    while not shutdown_event.is_set():
+        x, identifier = bus23.read()
+        if x is None:
+            print("NO X VALUE FROM BUS 23")
+            time.sleep(control_delay)
+            continue
+        print("X RATIO CONTROLLER YIPPIE:", x)
+        xval = -1*x
+        C.correct_car(xval)
+        time.sleep(control_delay)
+        px.forward(25)
+
+# Exception handle function
+def handle_exception(future):
+    exception = future.exception()
+    if exception:
+        print(f'Exception in worker thread: {exception}')
+
+# Define robot task
+def robot_task(i):
+    print('Starting robot task', i)
+    while not shutdown_event.is_set():
+        # Run some robot task...
+        print('Running robot task', i)
+        sleep(1)
+    # Print shut down message
+    print('Shutting down robot task', i)
+    # Test exception
+    if i == 1:
+        raise Exception('Robot task 1 raised an exception')
+
+
+start = input("Press 'y' to begin line following. Once started, press 's' to stop")
+
+px.set_cam_tilt_angle(-30)
+
+with ThreadPoolExecutor(max_workers=3) as executor:
+    eSensor = executor.submit(sensor, bus12,
+    sensor_delay)
+    eInterpreter = executor.submit(interpreter,
+    bus12, bus23,interp_delay)
+    eController = executor.submit(controller,bus23,control_delay)
+
+    # Add exception call back
+    eSensor.add_done_callback(handle_exception)
+    eInterpreter.add_done_callback(handle_exception)
+    eController.add_done_callback(handle_exception)
+
+    try:
+        # Keep the main thread running to respond to the kill signal
+        while not shutdown_event.is_set():
+            sleep(0.2)
+    except KeyboardInterrupt:
+        # Trigger the shutdown event when receiving the kill signal
+        print('Shutting down')
+        shutdown_event.set()
+    finally:
+        # Ensures all threads finish
+        executor.shutdown()
+
+
+
