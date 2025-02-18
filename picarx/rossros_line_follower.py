@@ -33,13 +33,15 @@ def sensor_cam():
     """
     Captures a single image from the camera and returns it as a NumPy array.
     """
-    Vilib.camera_start()
-    Vilib.display()
+    
+    time.sleep(0.1)
+    Vilib.camera_start(vflip=False,hflip=False)
+    Vilib.display(local=True,web=True)
     time.sleep(0.2)
 
     t = 1
     name = f"image{t}"
-    path = "picarx/"
+    path = "picarx"
     status = Vilib.take_photo(name, path)
 
     if status and Vilib.img is not None and isinstance(Vilib.img, np.ndarray):
