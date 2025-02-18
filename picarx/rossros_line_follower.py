@@ -41,7 +41,7 @@ def sensor_cam():
 
     t = 1
     name = f"image{t}"
-    path = "picarx"
+    path = "picarx/"
     status = Vilib.take_photo(name, path)
 
     if status and Vilib.img is not None and isinstance(Vilib.img, np.ndarray):
