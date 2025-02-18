@@ -46,6 +46,7 @@ def sensor_cam():
         full_path = f"{path}/{name}.jpg"
         cv2.imwrite(full_path, Vilib.img)
         captured_frame = cv2.imread(full_path)
+        logging.info(f"Image {name} has been captured by camera sensor module.")
         return captured_frame
     else:
         logging.warning("Failed to capture a valid image from camera.")
