@@ -18,7 +18,7 @@ FRAME_THRESHOLD = 60
 def line_following_with_obstacle(picar):
     sensor = Sensor()
     interpreter = Interpreter()
-    controller = Controller()
+    controller = Controller(picar)
 
     try:
         while(True):
