@@ -62,7 +62,7 @@ def interpretter_cam(frame):
         float: x_ratio in the range [-1, 1], representing how far off-center the line is.
     """
     if frame is None:
-        logging.warning("No frame available.")
+        logging.warning("No frame available from sensor.")
         return None
 
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
