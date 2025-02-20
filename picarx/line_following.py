@@ -12,7 +12,7 @@ from sensing_and_control.CONTROL import Interpretter
 from sensing_and_control.CONTROL import Controller
 
 def line_following(picar):
-    sensor = Sensor()
+    sensor = Sensor(picar)
     interpreter = Interpretter()
     controller = Controller(picar)
 
