@@ -21,8 +21,9 @@ def line_following(picar):
             picar.forward(30)
             data = sensor.read_data()
             turn_proportion = interpreter.interpret_sensor_reading_PID(data, k_p=0.3, k_i=0.001, k_d=0.02)
-            
+            print("Set till here 1")
             controller.set_turn_proportion(turn_proportion)
+            print("Set till here 2")
             time.sleep(0.05)
     except:
         pass
@@ -32,7 +33,9 @@ def main():
     # px.set_cam_tilt_angle(0)
     # px.set_cam_tilt_angle(-30)
     line_following(px)
+    print("Set till here 3")
     px.stop()
+    print("Set till here 4")
 
 if __name__ == "__main__":
 
