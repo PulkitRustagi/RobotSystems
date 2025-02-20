@@ -37,7 +37,7 @@ class Sensor():
         self.rotation_index %= self.num_samples
 
         data = np.mean(self.grayscale_data, axis=0)
-        print("data:", data)
+        print("mean data from grayscale: ", data)
         # return values
         return(data)
         

@@ -7,13 +7,13 @@ path = os.path.join(path, "..")
 sys.path.append(path)
 
 from picarx_improved import Picarx
-from sensing_and_control.CONTROL import Sensor
-from sensing_and_control.CONTROL import Interpretter
-from sensing_and_control.CONTROL import Controller
+from sensing_and_control.sensor import Sensor
+from sensing_and_control.interpreter import Interpreter
+from sensing_and_control.controller import Controller
 
 def line_following(picar):
     sensor = Sensor(picar)
-    interpretter = Interpretter(picar)
+    interpretter = Interpreter(picar)
     controller = Controller(picar)
 
 
