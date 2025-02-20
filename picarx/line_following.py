@@ -14,7 +14,7 @@ from sensing_and_control.controller import Controller
 def line_following(picar):
     sensor = Sensor()
     interpreter = Interpreter()
-    controller = Controller()
+    controller = Controller(picar)
 
     try:
         while(True):
@@ -29,8 +29,8 @@ def line_following(picar):
 
 def main():
     px = Picarx()
-    px.set_cam_tilt_angle(0)
-    px.set_cam_tilt_angle(-30)
+    # px.set_cam_tilt_angle(0)
+    # px.set_cam_tilt_angle(-30)
     line_following(px)
     px.stop()
 
