@@ -25,7 +25,7 @@ logging.getLogger().setLevel(logging.INFO)
 
 # Global objects and constants
 px = Picarx()
-SAFE_DISTANCE = 50
+SAFE_DISTANCE = 20
 DRIVE_SPEED = 30
 FRAME_THRESHOLD = 60
 

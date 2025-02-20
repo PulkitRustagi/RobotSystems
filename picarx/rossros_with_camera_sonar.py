@@ -11,7 +11,7 @@ logging.basicConfig(format=logging_format, level=logging.INFO, datefmt="%H:%M:%S
 logging.getLogger().setLevel(logging.DEBUG)
 
 
-SAFE_DISTANCE = 50
+SAFE_DISTANCE = 10
 DRIVE_SPEED = 30
 FRAME_THRESHOLD = 60
 
