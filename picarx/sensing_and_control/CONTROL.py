@@ -14,7 +14,7 @@ class Sensor():
 
 class Interpretter():
 
-    def __init__(self, px, sensitivity = 150, polarity = 1, reference = [500,500,500]):
+    def __init__(self, px, sensitivity = 20, polarity = 1, reference = [500,500,500]):
         self.px = px
         self.sensitivity = sensitivity
         self.polarity = polarity
