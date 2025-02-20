@@ -110,6 +110,7 @@ def sonic_stop(px, distance):
     Args:
         distance (float): The current distance reading from the ultrasonic sensor.
     """
+    print(f"Distance: {distance}")
     if distance < SAFE_DISTANCE:
         px.stop()
     else:
