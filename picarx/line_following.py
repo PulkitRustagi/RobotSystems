@@ -13,18 +13,18 @@ from sensing_and_control.CONTROL import Controller
 
 def line_following(picar):
     sensor = Sensor(picar)
-    interpreter = Interpretter(picar)
+    interpretter = Interpretter(picar)
     controller = Controller(picar)
 
 
     while(True):
         picar.forward(30)
-        data = sensor.get_grayscale_data()
-        turn_proportion = interpreter.interpret_sensor_reading_PID(data, k_p=0.3, k_i=0.001, k_d=0.02)
+        data = sensor.sensor_read()
+        turn_proportion = interpretter.process(data)
         print("Set till here 1")
         controller.align_steering(turn_proportion)
         print("Set till here 2")
-        time.sleep(0.05)
+        time.sleep(0.1)
 
 
 def main():
