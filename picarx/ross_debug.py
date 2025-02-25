@@ -112,20 +112,6 @@ def sonic_sensor_reading(px):
     print(f"Distance from sonar: {distance}")
     return distance
 
-
-def sonic_stop(px, distance):
-    """
-    Based on the distance from the ultrasonic sensor, either moves or stops the PiCar-X.
-
-    Args:
-        distance (float): The current distance reading from the ultrasonic sensor.
-    """
-    print(f"Distance: {distance}")
-    if distance < SAFE_DISTANCE:
-        px.stop()
-    else:
-        px.forward(30)
-
 if __name__ == "__main__":
     sensing = Sensing(camera=True)
     interpret = Interpretation(sensitivity=2.0, polarity=-1)
