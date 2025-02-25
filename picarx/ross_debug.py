@@ -11,7 +11,7 @@ logging.basicConfig(format=logging_format, level=logging.INFO, datefmt="%H:%M:%S
 logging.getLogger().setLevel(logging.DEBUG)
 
 
-SAFE_DISTANCE = 50
+SAFE_DISTANCE = 5 # cm
 DRIVE_SPEED = 30
 FRAME_THRESHOLD = 60
 
@@ -119,9 +119,15 @@ if __name__ == "__main__":
     controller = Controller(scaling_factor=30)
 
     while True:
+        print("Startng to sense")
         sensing.get_camera_image()  # stores the image in the path specified in the Sensing class "picarx/images"
+        print("Done with sensing")
+        print("Startng to interpret")
         line_position = interpret.line_position_camera(sensing.path, sensing.name) # returns a float between -1 and 1
+        print("Done with interpretting")
+        print("Startng to line follow")
         controller.follow_line(sensing.px, line_position) # sets the direction of the servo and the speed of the car
+        print("Done with Controller")
         time.sleep(0.1)
         # break if intrerrupted
         if cv2.waitKey(1) & 0xFF == ord('q'):
