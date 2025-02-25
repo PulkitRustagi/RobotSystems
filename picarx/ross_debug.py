@@ -83,7 +83,7 @@ class Controller():
         
     def follow_line(self, px, line_position):
         distance = sonic_sensor_reading(px)
-        if distance < SAFE_DISTANCE:
+        if distance > SAFE_DISTANCE:
             if -0.1 < line_position < 0.1:
                 px.set_dir_servo_angle(0)
                 px.forward(20)
