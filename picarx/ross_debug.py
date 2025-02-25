@@ -86,10 +86,10 @@ class Controller():
         if distance > SAFE_DISTANCE:
             if -0.1 < line_position < 0.1:
                 px.set_dir_servo_angle(0)
-                px.forward(20)
+                px.forward(30)
             else:
                 px.set_dir_servo_angle(line_position*self.angle_scale)
-                px.forward(20)
+                px.forward(30)
         else:
             print("Obstacle detected. Stopping the car. Distance from sonar: ", distance)
             px.stop()
