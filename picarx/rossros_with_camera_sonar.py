@@ -103,6 +103,7 @@ def sonic_sensor(px):
     distance = px.ultrasonic.read()
     while distance < 0:
         distance = px.ultrasonic.read()
+    print(f"Distance from sonar: {distance}")
     return distance
 
 
