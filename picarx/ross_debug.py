@@ -91,6 +91,7 @@ class Controller():
                 px.set_dir_servo_angle(line_position*self.angle_scale)
                 px.forward(20)
         else:
+            print("Obstacle detected. Stopping the car. Distance from sonar: ", distance)
             px.stop()
 
 
