@@ -100,7 +100,10 @@ def sonic_sensor(px):
     Returns:
         float: distance in centimeters, rounded to two decimals.
     """
-    return round(px.ultrasonic.read(), 2)
+    distance = px.ultrasonic.read()
+    while distance < 0:
+        distance = px.ultrasonic.read()
+    return distance
 
 
 def sonic_stop(px, distance):
