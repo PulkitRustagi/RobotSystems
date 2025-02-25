@@ -109,30 +109,32 @@ def angle_controller(x_ratio):
 # ------------------------------------------------
 # Ultrasonic Sensor Functions
 # ------------------------------------------------
-def sonic_sensor():
+def sonic_sensor_reading(px):
     """
     Reads the distance from the ultrasonic sensor.
 
     Returns:
         float: distance in centimeters, rounded to two decimals.
     """
-    distance = px.ultrasonic.read()
+    distance = px.get_distance()
     while distance < 0:
         distance = px.ultrasonic.read()
+    print(f"Distance from sonar: {distance}")
     return distance
 
 
-def sonic_stop(distance):
+def sonic_stop(px, distance):
     """
     Based on the distance from the ultrasonic sensor, either moves or stops the PiCar-X.
 
     Args:
         distance (float): The current distance reading from the ultrasonic sensor.
     """
+    print(f"Distance: {distance}")
     if distance < SAFE_DISTANCE:
         px.stop()
     else:
-        px.forward(DRIVE_SPEED)
+        px.forward(30)
 
 
 # ------------------------------------------------
