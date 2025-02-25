@@ -183,7 +183,7 @@ def main():
 
     # Ultrasonic tasks
     sonic_writer = rr.Producer(
-        sonic_sensor,
+        sonic_sensor_reading,
         ultrasonic_bus,
         0.05,
         bus_terminate,
